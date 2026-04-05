@@ -43,7 +43,7 @@ jobs:
 
       # ✅ 7. Build Docker Image (validation only)
       - name: Build Docker Image
-        run: docker build -t placement-tracker:latest .
+        run: docker build -t placement-tracker:latest ./server
 
       # ✅ 8. Trigger deployment on Render
       - name: Deploy to Render
