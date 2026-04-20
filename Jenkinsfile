@@ -75,13 +75,15 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 script {
-                    // Get Git commit hash properly
-                    def gitHash = bat(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    // Get Git commit hash properly using PowerShell for Windows
+                    def gitHash = powershell(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
                     def sanitizedHash = gitHash.replaceAll('[^a-zA-Z0-9]', '')
                     def buildNumber = env.BUILD_NUMBER ?: '1'
                     def imageTag = "${buildNumber}-${sanitizedHash}"
                     
                     echo "Building Docker images with tag: ${imageTag}"
+                    echo "Git hash: ${gitHash}"
+                    echo "Sanitized hash: ${sanitizedHash}"
                     
                     parallel(
                         'Frontend': {
