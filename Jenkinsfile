@@ -75,22 +75,17 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 script {
-                    // Get Git commit hash properly using PowerShell for Windows
-                    def gitHash = powershell(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-                    def sanitizedHash = gitHash.replaceAll('[^a-zA-Z0-9]', '')
+                    // Use simple build number for Docker tags to avoid validation issues
                     def buildNumber = env.BUILD_NUMBER ?: '1'
-                    def imageTag = "${buildNumber}-${sanitizedHash}"
+                    def imageTag = "build${buildNumber}"
                     
                     echo "Building Docker images with tag: ${imageTag}"
-                    echo "Git hash: ${gitHash}"
-                    echo "Sanitized hash: ${sanitizedHash}"
                     
                     parallel(
                         'Frontend': {
                             dir('client') {
                                 script {
                                     def frontendImage = docker.build("${DOCKER_IMAGE_PREFIX}-frontend:${imageTag}")
-                                    frontendImage.tag("${DOCKER_IMAGE_PREFIX}-frontend:latest")
                                     echo "Frontend image built: ${DOCKER_IMAGE_PREFIX}-frontend:${imageTag}"
                                 }
                             }
@@ -99,7 +94,6 @@ pipeline {
                             dir('server') {
                                 script {
                                     def backendImage = docker.build("${DOCKER_IMAGE_PREFIX}-backend:${imageTag}")
-                                    backendImage.tag("${DOCKER_IMAGE_PREFIX}-backend:latest")
                                     echo "Backend image built: ${DOCKER_IMAGE_PREFIX}-backend:${imageTag}"
                                 }
                             }
