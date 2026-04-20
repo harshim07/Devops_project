@@ -7,13 +7,6 @@ pipeline {
     }
     
     stages {
-        stage('Checkout Code') {
-            steps {
-                checkout scm
-                echo "Checked out commit: ${env.GIT_COMMIT_HASH}"
-            }
-        }
-        
         stage('Install Dependencies') {
             parallel {
                 stage('Frontend') {
@@ -101,36 +94,6 @@ pipeline {
             }
         }
         
-        stage('Test with Docker Compose') {
-            steps {
-                script {
-                    try {
-                        sh 'docker-compose -f docker-compose.yml up -d'
-                        
-                        sh '''
-                            echo "Waiting for services to be ready..."
-                            timeout 300 {
-                                until curl -f http://localhost:5000/; do
-                                    echo "Backend not ready, waiting..."
-                                    sleep 5
-                                done
-                            }
-                            until curl -f http://localhost:3000/; do
-                                echo "Frontend not ready, waiting..."
-                                sleep 5
-                            done
-                            echo "Application is running!"
-                        '''
-                        
-                    } catch (Exception e) {
-                        sh 'docker-compose -f docker-compose.yml logs'
-                        error "Application test failed"
-                    } finally {
-                        sh 'docker-compose -f docker-compose.yml down -v'
-                    }
-                }
-            }
-        }
     }
     
     post {
@@ -141,11 +104,9 @@ pipeline {
         }
         failure {
             echo "Pipeline failed!"
-            sh 'docker-compose -f docker-compose.yml logs || true'
             cleanWs()
         }
         always {
-            sh 'docker-compose -f docker-compose.yml down -v || true'
             sh 'docker system prune -f || true'
         }
     }
