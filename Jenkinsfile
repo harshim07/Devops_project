@@ -3,7 +3,6 @@ pipeline {
     
     environment {
         DOCKER_IMAGE_PREFIX = 'placement-tracker'
-        GIT_COMMIT_HASH = bat(script: 'git rev-parse --short HEAD', returnStdout: true).replaceAll('[^a-zA-Z0-9]', '').trim()
     }
     
     stages {
@@ -74,22 +73,36 @@ pipeline {
         }
         
         stage('Build Docker Images') {
-            parallel {
-                stage('Frontend') {
-                    steps {
-                        script {
-                            def frontendImage = docker.build("${DOCKER_IMAGE_PREFIX}-frontend:${env.GIT_COMMIT_HASH}", "./client")
-                            frontendImage.tag("${DOCKER_IMAGE_PREFIX}-frontend:latest")
+            steps {
+                script {
+                    // Get Git commit hash properly
+                    def gitHash = bat(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    def sanitizedHash = gitHash.replaceAll('[^a-zA-Z0-9]', '')
+                    def buildNumber = env.BUILD_NUMBER ?: '1'
+                    def imageTag = "${buildNumber}-${sanitizedHash}"
+                    
+                    echo "Building Docker images with tag: ${imageTag}"
+                    
+                    parallel(
+                        'Frontend': {
+                            dir('client') {
+                                script {
+                                    def frontendImage = docker.build("${DOCKER_IMAGE_PREFIX}-frontend:${imageTag}")
+                                    frontendImage.tag("${DOCKER_IMAGE_PREFIX}-frontend:latest")
+                                    echo "Frontend image built: ${DOCKER_IMAGE_PREFIX}-frontend:${imageTag}"
+                                }
+                            }
+                        },
+                        'Backend': {
+                            dir('server') {
+                                script {
+                                    def backendImage = docker.build("${DOCKER_IMAGE_PREFIX}-backend:${imageTag}")
+                                    backendImage.tag("${DOCKER_IMAGE_PREFIX}-backend:latest")
+                                    echo "Backend image built: ${DOCKER_IMAGE_PREFIX}-backend:${imageTag}"
+                                }
+                            }
                         }
-                    }
-                }
-                stage('Backend') {
-                    steps {
-                        script {
-                            def backendImage = docker.build("${DOCKER_IMAGE_PREFIX}-backend:${env.GIT_COMMIT_HASH}", "./server")
-                            backendImage.tag("${DOCKER_IMAGE_PREFIX}-backend:latest")
-                        }
-                    }
+                    )
                 }
             }
         }
