@@ -3,7 +3,7 @@ pipeline {
     
     environment {
         DOCKER_IMAGE_PREFIX = 'placement-tracker'
-        GIT_COMMIT_HASH = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+        GIT_COMMIT_HASH = bat(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
     }
     
     stages {
@@ -12,14 +12,14 @@ pipeline {
                 stage('Frontend') {
                     steps {
                         dir('client') {
-                            sh 'npm ci --silent'
+                            bat 'npm ci --silent'
                         }
                     }
                 }
                 stage('Backend') {
                     steps {
                         dir('server') {
-                            sh 'npm ci --silent'
+                            bat 'npm ci --silent'
                         }
                     }
                 }
@@ -31,14 +31,14 @@ pipeline {
                 stage('Frontend Build') {
                     steps {
                         dir('client') {
-                            sh 'npm run build'
+                            bat 'npm run build'
                         }
                     }
                 }
                 stage('Backend Test') {
                     steps {
                         dir('server') {
-                            sh 'npm ls --depth=0'
+                            bat 'npm ls --depth=0'
                         }
                     }
                 }
@@ -50,23 +50,23 @@ pipeline {
                 stage('Frontend Validation') {
                     steps {
                         dir('client') {
-                            sh 'echo "Validating frontend code..."'
-                            sh 'if [ ! -d "dist" ]; then echo "ERROR: Frontend build failed - dist directory not found"; exit 1; fi'
-                            sh 'if [ ! -f "package.json" ]; then echo "ERROR: package.json not found"; exit 1; fi'
-                            sh 'if [ ! -f "Dockerfile" ]; then echo "ERROR: Dockerfile not found"; exit 1; fi'
-                            sh 'echo "Frontend validation passed!"'
+                            bat 'echo "Validating frontend code..."'
+                            bat 'if not exist "dist" (echo "ERROR: Frontend build failed - dist directory not found" && exit /b 1)'
+                            bat 'if not exist "package.json" (echo "ERROR: package.json not found" && exit /b 1)'
+                            bat 'if not exist "Dockerfile" (echo "ERROR: Dockerfile not found" && exit /b 1)'
+                            bat 'echo "Frontend validation passed!"'
                         }
                     }
                 }
                 stage('Backend Validation') {
                     steps {
                         dir('server') {
-                            sh 'echo "Validating backend code..."'
-                            sh 'if [ ! -f "server.js" ]; then echo "ERROR: server.js not found"; exit 1; fi'
-                            sh 'if [ ! -f "package.json" ]; then echo "ERROR: package.json not found"; exit 1; fi'
-                            sh 'if [ ! -f "Dockerfile" ]; then echo "ERROR: Dockerfile not found"; exit 1; fi'
-                            sh 'node -c server.js'
-                            sh 'echo "Backend validation passed!"'
+                            bat 'echo "Validating backend code..."'
+                            bat 'if not exist "server.js" (echo "ERROR: server.js not found" && exit /b 1)'
+                            bat 'if not exist "package.json" (echo "ERROR: package.json not found" && exit /b 1)'
+                            bat 'if not exist "Dockerfile" (echo "ERROR: Dockerfile not found" && exit /b 1)'
+                            bat 'node -c server.js'
+                            bat 'echo "Backend validation passed!"'
                         }
                     }
                 }
@@ -98,16 +98,22 @@ pipeline {
     
     post {
         success {
-            echo "Pipeline completed successfully!"
-            archiveArtifacts artifacts: 'client/dist/**/*', fingerprint: true
-            cleanWs()
+            script {
+                echo "Pipeline completed successfully!"
+                archiveArtifacts artifacts: 'client/dist/**/*', fingerprint: true
+                cleanWs()
+            }
         }
         failure {
-            echo "Pipeline failed!"
-            cleanWs()
+            script {
+                echo "Pipeline failed!"
+                cleanWs()
+            }
         }
         always {
-            sh 'docker system prune -f || true'
+            script {
+                bat 'docker system prune -f || echo "Docker prune failed"'
+            }
         }
     }
 }
