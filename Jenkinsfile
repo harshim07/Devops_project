@@ -3,7 +3,7 @@ pipeline {
     
     environment {
         DOCKER_IMAGE_PREFIX = 'placement-tracker'
-        GIT_COMMIT_HASH = bat(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+        GIT_COMMIT_HASH = bat(script: 'git rev-parse --short HEAD', returnStdout: true).replaceAll('[^a-zA-Z0-9]', '').trim()
     }
     
     stages {
